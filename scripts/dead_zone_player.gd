@@ -32,9 +32,9 @@ var _base_walk_speed: float = 5.0
 var _base_sprint_speed: float = 8.0
 
 var _hero: Node3D
-var _hero_leg_l: MeshInstance3D
-var _hero_leg_r: MeshInstance3D
-var _hero_arm_r: MeshInstance3D
+var _hero_rig: HeroRig
+var _raise: float = 0.0
+var _since_shot: float = 99.0
 var _gun_view: Node3D
 var _muzzle: Node3D
 var _muzzle_flash: OmniLight3D
@@ -65,47 +65,20 @@ func _ready() -> void:
 	_muzzle_flash.light_energy = 0.0
 	_muzzle_flash.omni_range = 5.0
 	_muzzle = Node3D.new()
-	_muzzle.position = Vector3(0.28, -0.22, -0.9)
+	_muzzle.position = Vector3(0.15, -0.16, -1.38)
 	camera.add_child(_muzzle)
 	_muzzle.add_child(_muzzle_flash)
 	_set_view("fps")
 
 func _build_hero() -> void:
-	# Acid-yellow hazmat suit, green visor, tank + hoses. Visible in third person.
-	_hero = Node3D.new()
-	_hero.name = "HeroBody"
-	add_child(_hero)
-	var suit := StandardMaterial3D.new()
-	suit.albedo_color = Color(0.85, 0.68, 0.08)
-	suit.roughness = 0.55
-	var dark := StandardMaterial3D.new()
-	dark.albedo_color = Color(0.16, 0.16, 0.14)
-	dark.roughness = 0.85
-	var visor_mat := StandardMaterial3D.new()
-	visor_mat.albedo_color = Color(0.05, 0.2, 0.1)
-	visor_mat.emission_enabled = true
-	visor_mat.emission = Color(0.1, 0.9, 0.4)
-	visor_mat.emission_energy_multiplier = 1.2
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color(0.35, 0.35, 0.33)
-	metal.roughness = 0.35
-	metal.metallic = 0.8
-	_mk(_hero, Vector3(0.58, 0.68, 0.34), Vector3(0, 1.08, 0), suit) # torso
-	_mk(_hero, Vector3(0.42, 0.2, 0.36), Vector3(0, 1.32, 0), dark) # chest rig
-	_mk(_hero, Vector3(0.34, 0.36, 0.34), Vector3(0, 1.62, 0), suit) # helmet
-	_mk(_hero, Vector3(0.28, 0.16, 0.04), Vector3(0, 1.64, 0.17), visor_mat) # visor
-	_mk(_hero, Vector3(0.36, 0.5, 0.24), Vector3(0, 1.1, -0.3), metal) # air tank
-	_hero_leg_l = _mk(_hero, Vector3(0.2, 0.68, 0.22), Vector3(-0.16, 0.38, 0), suit)
-	_hero_leg_r = _mk(_hero, Vector3(0.2, 0.68, 0.22), Vector3(0.16, 0.38, 0), suit)
-	_mk(_hero, Vector3(0.15, 0.55, 0.17), Vector3(-0.38, 1.05, 0.05), suit)
-	_hero_arm_r = _mk(_hero, Vector3(0.15, 0.55, 0.17), Vector3(0.38, 1.05, 0.15), suit)
-	_hero_arm_r.rotation.x = -1.0
-	# Rifle held forward.
-	var gun := Node3D.new()
-	gun.position = Vector3(0.15, 1.12, 0.42)
-	_hero.add_child(gun)
-	_mk(gun, Vector3(0.08, 0.1, 0.8), Vector3(0, 0, 0.2), metal)
-	_mk(gun, Vector3(0.05, 0.12, 0.25), Vector3(0, 0.06, -0.15), dark)
+	# One-piece skinned hazmat hero (assets/hero/hero.glb): a single mesh with a single
+	# material/atlas, posed by HeroRig. The player's origin is the capsule centre, so the
+	# model's feet sit 0.9 m below it, on the floor.
+	_hero_rig = HeroRig.new()
+	_hero_rig.name = "HeroBody"
+	_hero_rig.position = Vector3(0, -0.9, 0)
+	add_child(_hero_rig)
+	_hero = _hero_rig
 
 func _mk(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
@@ -114,35 +87,43 @@ func _mk(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshInst
 	mi.mesh = box
 	mi.material_override = mat
 	mi.position = pos
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	parent.add_child(mi)
 	return mi
 
 func _build_gun_view() -> void:
-	# First-person viewmodel: rifle + gloved hand block at the bottom of the view.
+	# First-person viewmodel: the hero's multi-barrel rifle + gloved hands, same atlas material.
 	_gun_view = Node3D.new()
-	_gun_view.position = Vector3(0.28, -0.24, -0.55)
+	_gun_view.position = Vector3(0.15, -0.2, -0.7)
 	camera.add_child(_gun_view)
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color(0.2, 0.2, 0.2)
-	metal.roughness = 0.35
-	metal.metallic = 0.85
-	var yellow := StandardMaterial3D.new()
-	yellow.albedo_color = Color(0.85, 0.68, 0.08)
-	yellow.roughness = 0.5
-	_mk(_gun_view, Vector3(0.07, 0.09, 0.62), Vector3(0, 0, 0), metal)
-	_mk(_gun_view, Vector3(0.05, 0.07, 0.2), Vector3(0, 0.07, -0.1), metal)
-	_mk(_gun_view, Vector3(0.09, 0.06, 0.16), Vector3(0, -0.05, 0.18), yellow)
+	var packed: PackedScene = load("res://assets/hero/hero_fps.glb")
+	var inst: Node = packed.instantiate()
+	_gun_view.add_child(inst)
+	var mat: Material = _hero_rig.hero_material()
+	_apply_material(inst, mat)
+
+func _apply_material(n: Node, mat: Material) -> void:
+	if n is MeshInstance3D:
+		var mi := n as MeshInstance3D
+		mi.material_override = mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for c in n.get_children():
+		_apply_material(c, mat)
 
 func _set_view(mode: String) -> void:
 	view_mode = mode
-	_hero.visible = (mode == "tps")
+	_hero.visible = (mode != "fps")
 	_gun_view.visible = (mode == "fps")
 	if mode == "fps":
 		camera.position = Vector3.ZERO
 		camera.rotation = Vector3.ZERO
 	if hud != null:
-		hud.show_message("Third-person view" if mode == "tps" else "First-person view")
+		match mode:
+			"tps":
+				hud.show_message("Third-person view")
+			"front":
+				hud.show_message("Hero view (front)")
+			_:
+				hud.show_message("First-person view")
 
 # --- Public actions (used by keyboard handlers and the touch controls) ---
 func set_firing(on: bool) -> void:
@@ -162,7 +143,16 @@ func place_trap(kind: String) -> void:
 		_place_trap()
 
 func toggle_view() -> void:
-	_set_view("tps" if view_mode == "fps" else "fps")
+	_set_view(_next_view())
+
+func _next_view() -> String:
+	# fps -> over-the-shoulder -> hero front view -> fps
+	match view_mode:
+		"fps":
+			return "tps"
+		"tps":
+			return "front"
+	return "fps"
 
 func toggle_flashlight() -> void:
 	_flashlight.visible = not _flashlight.visible
@@ -193,7 +183,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_Q:
 				_place_trap()
 			KEY_V:
-				_set_view("tps" if view_mode == "fps" else "fps")
+				_set_view(_next_view())
 			KEY_F:
 				_flashlight.visible = not _flashlight.visible
 
@@ -214,14 +204,14 @@ func _physics_process(delta: float) -> void:
 		_shoot()
 	if _reload_timer > 0.0 and ammo_in_mag == 0:
 		pass
-	# Walk cycle for the third-person hero + water splash sounds.
+	# Walk cycle + weapon pose for the third-person hero + water splash sounds.
 	var planar := Vector2(velocity.x, velocity.z).length()
 	_walk_phase += planar * delta * 1.9
-	var swing := sin(_walk_phase) * clampf(planar / 4.0, 0.0, 1.0) * 0.5
+	_since_shot += delta
+	var raise_target := 1.0 if (aiming or _firing or _since_shot < 1.6) else 0.0
+	_raise = move_toward(_raise, raise_target, delta * 5.0)
 	if _hero.visible:
-		_hero_leg_l.rotation.x = swing
-		_hero_leg_r.rotation.x = -swing
-		_hero_arm_r.rotation.x = -1.0 + swing * 0.2
+		_hero_rig.set_pose(_walk_phase, clampf(planar / 4.5, 0.0, 1.0), _raise, head.rotation.x, delta)
 	if in_water and planar > 1.0:
 		_splash_timer -= delta
 		if _splash_timer <= 0.0:
@@ -233,29 +223,74 @@ func _physics_process(delta: float) -> void:
 	if absf(camera.fov - target_fov) > 0.2:
 		camera.fov = lerpf(camera.fov, target_fov, delta * 10.0)
 	if view_mode == "fps":
-		var target_x := -0.26 if aiming else 0.0
-		_gun_view.position.x = lerpf(_gun_view.position.x, 0.28 + target_x, delta * 10.0)
+		var target_x := -0.15 if aiming else 0.0
+		_gun_view.position.x = lerpf(_gun_view.position.x, 0.15 + target_x, delta * 10.0)
+		_gun_view.position.y = lerpf(_gun_view.position.y, -0.13 if aiming else -0.2, delta * 10.0)
 	# Third-person camera: over-the-shoulder boom behind the player.
 	if view_mode == "tps":
 		_update_tps_camera(delta)
+	elif view_mode == "front":
+		_update_front_camera(delta)
+
+func _feet_y() -> float:
+	return global_position.y - 0.9
 
 func _update_tps_camera(delta: float) -> void:
-	# Camera sits behind + right of the player, looking along the head pitch.
+	# Camera sits behind + right of the hero, looking along the head pitch.
 	var yaw := rotation.y
 	var back := Vector3(sin(yaw), 0.0, cos(yaw))
 	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
-	var dist := 2.1 if aiming else _tps_cam_offset.z
-	var off := 0.45 if aiming else _tps_cam_offset.x
-	var desired: Vector3 = global_position + Vector3(0, 1.7, 0) + back * dist + right * off + Vector3(0, _tps_cam_offset.y - 1.0, 0)
-	# Keep the camera out of the floor and walls is the level's job; clamp height.
+	var dist := 2.0 if aiming else _tps_cam_offset.z
+	var off := 0.4 if aiming else _tps_cam_offset.x
+	var base := Vector3(global_position.x, _feet_y() + 1.55, global_position.z)
+	var desired: Vector3 = base + back * dist + right * off + Vector3(0, 0.3, 0)
 	desired.y = maxf(desired.y, 0.6)
+	desired = _clip_camera(base, desired)
 	camera.global_position = camera.global_position.lerp(desired, 1.0 - pow(0.0005, delta))
-	var look_target: Vector3 = global_position + Vector3(0, 1.4, 0) - back * 9.0
-	# Apply head pitch to the look target.
+	var look_target: Vector3 = base - back * 9.0 + Vector3(0, 0.1, 0)
 	var pitch := head.rotation.x
-	look_target.y += -sin(pitch) * 9.0
+	look_target.y += sin(pitch) * 9.0
 	camera.look_at(look_target, Vector3.UP)
-	# The hero faces where the body faces; the camera orbits behind it.
+
+func _update_front_camera(delta: float) -> void:
+	# Hero showcase: camera in front of the hero, looking back at them.
+	var fwd := -global_transform.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var feet := Vector3(global_position.x, _feet_y(), global_position.z)
+	var focus0: Vector3 = feet + Vector3(0, 1.0, 0)
+	var desired: Vector3 = feet + Vector3(0, 1.45, 0)
+	var best_d := -1.0
+	# Try in front of the hero first, then the sides and back, so a wall never hides the model.
+	for off: float in [0.0, 0.5, -0.5, 1.5, -1.5, 3.14]:
+		var dir := fwd.rotated(Vector3.UP, off)
+		var cand: Vector3 = feet + dir * 3.0 + Vector3(0, 1.45, 0)
+		var clipped := _clip_camera(focus0, cand)
+		var d := clipped.distance_to(focus0)
+		if d > best_d + 0.01:
+			best_d = d
+			desired = clipped
+		if d >= 2.9:
+			break
+	var focus: Vector3 = feet + Vector3(0, 1.0, 0)
+	camera.global_position = camera.global_position.lerp(desired, 1.0 - pow(0.0005, delta))
+	camera.look_at(focus, Vector3.UP)
+
+func _clip_camera(from: Vector3, to: Vector3) -> Vector3:
+	# Pull the camera in front of any wall/pillar between the hero and the camera.
+	var q := PhysicsRayQueryParameters3D.create(from, to, 1)
+	q.exclude = [get_rid()]
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(q)
+	if hit.is_empty():
+		return to
+	var pos: Vector3 = hit["position"]
+	return pos + (from - pos).normalized() * 0.2
+
+func _aim_from() -> Vector3:
+	return head.global_position if view_mode == "front" else camera.global_position
+
+func _aim_dir() -> Vector3:
+	return -head.global_transform.basis.z if view_mode == "front" else -camera.global_transform.basis.z
 
 func take_damage(amount: float) -> void:
 	if not alive:
@@ -297,8 +332,9 @@ func _shoot() -> void:
 	if hud != null:
 		hud.set_ammo(ammo_in_mag, mag_size, grenades, mines, toxic_traps)
 	# Hitscan ray from the camera through the crosshair.
-	var from := camera.global_position
-	var dir := -camera.global_transform.basis.z
+	_since_shot = 0.0
+	var from := _aim_from()
+	var dir := _aim_dir()
 	var to := from + dir * 80.0
 	var query := PhysicsRayQueryParameters3D.create(from, to, 3, [get_rid()])
 	var space := get_world_3d().direct_space_state
@@ -315,7 +351,8 @@ func _shoot() -> void:
 				sfx.play("hit", -8.0)
 			if hud != null and headshot:
 				hud.show_message("HEADSHOT")
-	_spawn_tracer(_muzzle.global_position, end)
+	var muzzle_pos: Vector3 = _muzzle.global_position if view_mode == "fps" else _hero_rig.muzzle_global()
+	_spawn_tracer(muzzle_pos, end)
 	if ammo_in_mag <= 0:
 		_start_reload()
 
@@ -349,8 +386,8 @@ func _throw_grenade() -> void:
 	grenades -= 1
 	var g := Grenade.new()
 	get_parent().add_child(g)
-	g.global_position = camera.global_position + -camera.global_transform.basis.z * 0.6 + Vector3(0, -0.1, 0)
-	var dir := -camera.global_transform.basis.z
+	var dir := _aim_dir()
+	g.global_position = _aim_from() + dir * 0.6 + Vector3(0, -0.1, 0)
 	g.setup(dir * 13.0 + Vector3(0, 4.5, 0), sfx)
 	if hud != null:
 		hud.set_ammo(ammo_in_mag, mag_size, grenades, mines, toxic_traps)
