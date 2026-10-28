@@ -1,86 +1,113 @@
-# Bombies: Dead Zone
+# Gemini API skills
 
-A squad-based first/third-person wave shooter in Summer Engine (Godot 4.6).
-You are the rogue hazmat engineer, holding a flooded underground parking
-garage against mutating Bombies. Three rounds, then the exit opens.
+A library of skills for the Gemini API, SDK and model interactions.
 
-## First playable version (in this repo)
+## About
 
-- Flooded parking garage: murky standing water (slows you, not the runners),
-  pillar grid, rusted parked cars, ramp to a mezzanine, amber tube lights and
-  a flickering red emergency light, fog and haze.
-- Hazmat engineer: hitscan rifle (30-round mag, R to reload), toxic grenades
-  (G, area-denial acid cloud), two trap types (1 = proximity mine, 2 = acid
-  trap, Q = place selected).
-- V toggles first / third person. Right mouse aims down sights. F toggles
-  the flashlight.
-- 3 rounds: shamblers, then runners, then runners + tank brutes. After 40
-  seconds in a round the surviving Bombies mutate (faster, tougher, redder).
-- Win at round 3 (exit stairwell opens). Lose when downed. R restarts.
-- Procedural sound: shots, booms, groans, drips, splashes — no audio files.
-- Concept art for the game is in `assets/concept/`; the design brief is in
-  `.summer/GameSoul.md`.
+LLMs have fixed knowledge, being trained at a specific point in time. Software
+dev is fast paced and changes often, where new libraries are launched every day
+and best practices evolve quickly.
 
-## Open it in Summer Engine
+This leaves a knowledge gap that language models can't solve on their own. For
+example, models don't know about themselves when they're trained, and they
+aren't necessarily aware of subtle changes in best practices (like [thought
+circulation](https://ai.google.dev/gemini-api/docs/thought-signatures)) or SDK
+changes.
 
-Summer Engine (macOS / Windows) → open this folder as a project. The main
-scene is `main.tscn`.
+[Skills](https://agentskills.io/) are a lightweight technique for adding
+relevant context to your agents. This repo contains skills related to building
+apps powered by the Gemini API.
 
-> Note: Summer Engine has no Linux build yet, so this project was built and
-> verified on Linux with stock Godot 4.6.3 instead of the Summer editor.
+### Performance
 
-## Verify without the editor (stock Godot 4.6+)
+Our evaluations found that adding this skill improved an agent's ability to
+generate correct API code following best practices to 87% with Gemini 3 Flash
+and 96% with Gemini 3.1 Pro. For more details, see our blog post:
+[Closing the knowledge gap with agent skills](https://developers.googleblog.com/closing-the-knowledge-gap-with-agent-skills/).
 
-```bash
-# Import once (builds .godot/ caches):
-godot --headless --import --path .
-# Boot + self-play all 3 rounds under Xvfb, saves frames to /tmp/dz-shot-*.png:
-DZ_SELFTEST=1 xvfb-run -a -s "-screen 0 1280x720x24" \
-  godot --path . --resolution 1280x720
+## Skills in this repo
+
+> [!IMPORTANT]
+> The `vertex-ai-api-dev` skill has moved to
+> [skills/cloud/gemini-api](https://github.com/google/skills/tree/main/skills/cloud/gemini-api).
+
+| Skill | Description |
+| :--- | :--- |
+| [`gemini-api-dev`](skills/gemini-api-dev) | Skill for building apps with the [Gemini API](https://ai.google.dev/gemini-api/docs/interactions?ua=chat) (Interactions API). Covers text generation, multi-turn chat, streaming, function calling, structured output, image generation, speech generation (TTS), Voice Design, Voice Replication, managed agents, Deep Research, deprecated model guardrails, and both Python and TypeScript SDKs. |
+| [`gemini-live-api-dev`](skills/gemini-live-api-dev) | Skill for building real-time, bidirectional streaming apps with the Gemini Live API. Covers WebSocket-based audio/video/text streaming, voice activity detection, native audio features, function calling, and session management. |
+| [`gemini-omni-flash-api`](skills/gemini-omni-flash-api) | Specialized generative AI video skill focused on Gemini Omni 1.1 Flash (`gemini-omni-1.1-flash`), video editing, image and video referenced generation, first and last frame transitions, and video extensions using the Interactions API. |
+
+## Installation
+
+You can install these skills across your preferred AI coding assistants and package managers:
+
+### Using [Vercel skills CLI](https://skills.sh)
+
+```sh
+# Interactively browse and install skills.
+npx skills add google-gemini/gemini-skills --list
+
+# Install a specific skill (e.g., gemini-api-dev).
+npx skills add google-gemini/gemini-skills --skill gemini-api-dev
 ```
 
-The template's own probe also works once Summer Engine is available:
+### Using [Context7 skills CLI](https://context7.com)
 
-```bash
-bash tests/autopilot/run.sh
+```sh
+# Interactively browse and install skills.
+npx ctx7 skills install /google-gemini/gemini-skills
+
+# Install a specific skill (e.g., gemini-api-dev).
+npx ctx7 skills install /google-gemini/gemini-skills gemini-api-dev
 ```
 
-## Android (touch controls + GitHub APK build)
+### Antigravity
 
-On a touch device (Android, or `DZ_TOUCH=1` on desktop) the game shows touch
-controls in landscape: floating left joystick = move, drag anywhere on the right
-side = look, buttons for FIRE (hold; drag while holding to aim), JUMP, RELOAD,
-GREN, MINE, ACID, ADS (toggle), SPRINT (toggle), VIEW (first/third person) and
-LIGHT. After a win or loss, tap anywhere to restart. Keyboard + mouse still work
-on desktop.
+The Gemini skills come bundled with Antigravity, find them under
+⚙️ → Customizations → Build with Google Plugins.
 
-### Get the APK from GitHub (no local setup)
+Or install through the AGY CLI:
 
-1. Create a new GitHub repository and upload the **contents** of this project
-   to the repository root (so `project.godot` and the `.github` folder sit at
-   the top level; make sure the hidden `.github/workflows/build-apk.yml` is
-   uploaded).
-2. Open the repo's **Actions** tab > **Build APK**. It runs automatically on
-   every push to `main`; you can also press **Run workflow**.
-3. When the run is green, open it and download the **bombies-dead-zone-apk**
-   artifact (a zip containing `bombies-dead-zone-debug.apk`). The same APK is
-   also published under the repo's **Releases**.
-4. Copy the APK to your phone and install it (allow "install unknown apps").
+```sh
+# Install it directly
+agy plugin install https://github.com/google-gemini/gemini-skills
+```
 
-The APK is arm64-v8a, debug-signed with a throw-away keystore generated during
-the build, so no secrets or setup are needed. It is for sideloading, not the
-Play Store.
+### Claude Code
 
-## Controls
+```sh
+# Register the marketplace
+/plugin marketplace add google-gemini/gemini-skills
 
-| Input | Action |
-| --- | --- |
-| WASD / mouse | Move / look (Shift sprint, Space jump) |
-| Left click | Fire |
-| Right click (hold) | Aim down sights |
-| R | Reload |
-| G | Throw toxic grenade |
-| 1 / 2 / Q | Place mine / acid trap / selected trap |
-| V | First / third person |
-| F | Flashlight |
-| Esc | Release mouse |
+# Install the plugin
+/plugin install gemini-skills@gemini-skills
+```
+
+### Cursor
+
+Install directly from the Cursor plugin directory or via the editor command:
+
+```text
+/add-plugin google-gemini/gemini-skills
+```
+
+### OpenAI Codex
+
+```sh
+# Add the marketplace source
+codex plugin marketplace add https://github.com/google-gemini/gemini-skills
+
+# Install the plugin
+codex plugin add gemini-skills@gemini-skills
+```
+
+## More info
+
+You can find additional information about setting up your coding assistant with
+Gemini API MCP and Skills in [the docs](https://ai.google.dev/gemini-api/docs/coding-agents).
+
+## Disclaimer
+
+This is not an officially supported Google product. This project is not
+eligible for the [Google Open Source Software Vulnerability Rewards
+Program](https://bughunters.google.com/open-source-security).
