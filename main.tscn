@@ -1,0 +1,59 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/garage.gd" id="1_garage"]
+[ext_resource type="Script" path="res://scripts/dead_zone_player.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/dead_zone.gd" id="3_game"]
+[ext_resource type="Script" path="res://scripts/hud.gd" id="4_hud"]
+[ext_resource type="Script" path="res://scripts/sfx.gd" id="5_sfx"]
+
+[sub_resource type="Environment" id="Environment_deadzone"]
+background_mode = 1
+background_color = Color(0.015, 0.02, 0.025, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.42, 0.45, 0.42, 1)
+ambient_light_energy = 0.5
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.06, 0.08, 0.06, 1)
+fog_light_energy = 0.4
+fog_density = 0.025
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
+radius = 0.4
+height = 1.8
+
+[node name="DeadZone" type="Node3D"]
+
+[node name="World" type="Node3D" parent="."]
+script = ExtResource("1_garage")
+
+[node name="Game" type="Node" parent="."]
+script = ExtResource("3_game")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("4_hud")
+
+[node name="Sfx" type="Node" parent="."]
+script = ExtResource("5_sfx")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 12, 0)
+light_color = Color(0.6, 0.65, 0.7, 1)
+light_energy = 0.25
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_deadzone")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 14)
+script = ExtResource("2_player")
+
+[node name="Collision" type="CollisionShape3D" parent="Player"]
+shape = SubResource("CapsuleShape_player")
+
+[node name="Head" type="Node3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Camera" type="Camera3D" parent="Player/Head"]
+fov = 70.0

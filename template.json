@@ -1,0 +1,36 @@
+{
+  "id": "3d-fps-old-school",
+  "version": "1.0.2",
+  "name": "Old-School 3D FPS Arena",
+  "engineMinVersion": "0.5.43",
+  "entryScene": "res://main.tscn",
+  "dimension": "3D",
+  "mechanics": [
+    "first-person-controller",
+    "mouse-look",
+    "walk-and-sprint",
+    "jump-buffer",
+    "coyote-time",
+    "air-control",
+    "procedural-arena",
+    "primitive-collision",
+    "external-impulses"
+  ],
+  "genres": [
+    "fps",
+    "arena",
+    "old-school-shooter"
+  ],
+  "agentBrief": "A deliberately small old-school first-person movement starter. ENTRY: res://main.tscn. scripts/player_controller.gd owns a CharacterBody3D controller with WASD movement, sprint, jump buffering, coyote time, asymmetric fall gravity, ground and air acceleration, captured mouse look, and a public add_external_velocity() hook for knockback, jump pads, explosions, or conveyors. scripts/arena.gd builds a Quake-like box arena, obstacles, pillars, a low platform, and climbable steps at runtime from primitive meshes and StaticBody3D collision. The wall and floor materials use tiny redistributable textures with procedural fallbacks, so the template is cheap to import and easy to reskin. This is a movement and level-blockout foundation, not a complete combat game: add weapons, targets, health, HUD, and an objective on top of the existing controller instead of replacing its tuned movement core.",
+  "shipsProjectGodot": true,
+  "userFacing": {
+    "tagline": "A tiny Quake-style FPS movement and arena starter, ready for weapons and enemies.",
+    "highlights": [
+      "Tuned first-person movement with sprint, air control, coyote time and jump buffering",
+      "Captured mouse look with editable sensitivity and pitch limits",
+      "Procedurally assembled arena with collision, obstacles and climbable steps",
+      "Public impulse hook for knockback, explosions, jump pads and conveyors",
+      "Primitive geometry and tiny redistributable textures keep the project lightweight"
+    ]
+  }
+}
